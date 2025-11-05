@@ -47,12 +47,12 @@ jobs:
       #     }
       #   shell: pwsh
 
-      - name: List all files in release directory
-        run: |
-          Write-Host "=== Release 目录完整文件列表 ==="
-          Get-ChildItem -Path "build\windows\runner\Release" -Recurse | 
-            Format-Table Name, @{Name="Size(KB)";Expression={[math]::Round($_.Length/1KB,2)}}, LastWriteTime
-        shell: pwsh
+      # - name: List all files in release directory
+      #   run: |
+      #     Write-Host "=== Release 目录完整文件列表 ==="
+      #     Get-ChildItem -Path "build\windows\runner\Release" -Recurse |
+      #       Format-Table Name, @{Name="Size(KB)";Expression={[math]::Round($_.Length/1KB,2)}}, LastWriteTime
+      #   shell: pwsh
 
       - name: Upload executable
         uses: actions/upload-artifact@v4
