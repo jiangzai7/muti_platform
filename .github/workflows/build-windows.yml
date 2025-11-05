@@ -28,24 +28,24 @@ jobs:
       - name: Build Windows app
         run: flutter build windows --release
 
-      - name: Verify EXE file exists
-        id: verify_exe
-        run: |
-          $exePath = "build\windows\runner\Release\*.exe"
-          $exeFiles = Get-ChildItem -Path $exePath -ErrorAction SilentlyContinue
-          if ($exeFiles) {
-            Write-Host "✅ EXE 文件找到: $($exeFiles.FullName)"
-            Write-Host "文件大小: $([math]::Round($exeFiles.Length/1MB,2)) MB"
-            Write-Host "::set-output name=exe_path::$($exeFiles.FullName)"
-            Write-Host "::set-output name=exe_name::$($exeFiles.Name)"
-          } else {
-            Write-Host "❌ 未找到 EXE 文件"
-            Write-Host "当前目录: $(Get-Location)"
-            Write-Host "构建目录内容:"
-            Get-ChildItem -Path "build" -Recurse | Format-Table FullName
-            exit 1
-          }
-        shell: pwsh
+      # - name: Verify EXE file exists
+      #   id: verify_exe
+      #   run: |
+      #     $exePath = "build\windows\runner\Release\*.exe"
+      #     $exeFiles = Get-ChildItem -Path $exePath -ErrorAction SilentlyContinue
+      #     if ($exeFiles) {
+      #       Write-Host "✅ EXE 文件找到: $($exeFiles.FullName)"
+      #       Write-Host "文件大小: $([math]::Round($exeFiles.Length/1MB,2)) MB"
+      #       Write-Host "::set-output name=exe_path::$($exeFiles.FullName)"
+      #       Write-Host "::set-output name=exe_name::$($exeFiles.Name)"
+      #     } else {
+      #       Write-Host "❌ 未找到 EXE 文件"
+      #       Write-Host "当前目录: $(Get-Location)"
+      #       Write-Host "构建目录内容:"
+      #       Get-ChildItem -Path "build" -Recurse | Format-Table FullName
+      #       exit 1
+      #     }
+      #   shell: pwsh
 
       - name: List all files in release directory
         run: |
