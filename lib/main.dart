@@ -47,7 +47,7 @@ class MyApp extends StatelessWidget {
       home:
           kIsWeb
               ? MyHomePage(title: 'Flutter Demo Home Page')
-              : Platform.isMacOS
+              : Platform.isMacOS || Platform.isWindows
               ? MyMacosPage(title: "Flutter MacOS")
               : MyHomePage(title: 'Flutter Demo Home Page'),
       // 配置菜单栏
