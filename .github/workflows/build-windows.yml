@@ -59,9 +59,9 @@ jobs:
         with:
           name: MyApp-Windows
           path: |
-            build\windows\runner\Release\*.exe
-            build\windows\runner\Release\*.dll
-            build\windows\runner\Release\data\
+            build\windows\x64\runner\Release\*.exe
+            build\windows\x64\runner\Release\*.dll
+            build\windows\x64\runner\Release\data\
           retention-days: 30
 
       - name: Show download instructions
