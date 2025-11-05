@@ -31,7 +31,7 @@ jobs:
       # - name: Verify EXE file exists
       #   id: verify_exe
       #   run: |
-      #     $exePath = "build\windows\runner\Release\*.exe"
+      #     $exePath = "build\windows\x64\runner\Release\*.exe"
       #     $exeFiles = Get-ChildItem -Path $exePath -ErrorAction SilentlyContinue
       #     if ($exeFiles) {
       #       Write-Host "✅ EXE 文件找到: $($exeFiles.FullName)"
@@ -50,7 +50,7 @@ jobs:
       # - name: List all files in release directory
       #   run: |
       #     Write-Host "=== Release 目录完整文件列表 ==="
-      #     Get-ChildItem -Path "build\windows\runner\Release" -Recurse |
+      #     Get-ChildItem -Path "build\windows\x64\runner\Release" -Recurse |
       #       Format-Table Name, @{Name="Size(KB)";Expression={[math]::Round($_.Length/1KB,2)}}, LastWriteTime
       #   shell: pwsh
 

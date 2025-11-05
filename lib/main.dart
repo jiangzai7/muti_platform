@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:io';
 
 import 'package:contextmenu/contextmenu.dart';
@@ -5,6 +6,7 @@ import 'package:file_picker/file_picker.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:mix_platform/drag.dart';
 
 void main() {
   runApp(const MyApp());
@@ -299,6 +301,8 @@ class _MyMacosPageState extends State<MyMacosPage> {
     },
   ];
   var inputTextController = TextEditingController();
+  File? imageFileSelected;
+  bool isDragged = false;
 
   var dateController = TextEditingController(
     text:
@@ -331,6 +335,7 @@ class _MyMacosPageState extends State<MyMacosPage> {
               TextButton(
                 onPressed: () {
                   // _deleteItem();
+                  isDragged = false;
                   (chatSelected["message"] as List<String>).add(s);
                   setState(() {});
                   Navigator.pop(context);
@@ -343,9 +348,166 @@ class _MyMacosPageState extends State<MyMacosPage> {
     );
   }
 
+  _addFriend() {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder:
+          (context) => Dialog(
+            backgroundColor: Colors.white,
+            child: Container(
+              width: 800,
+              height: 500,
+              padding: EdgeInsets.all(30),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Column(
+                    children: [
+                      Container(padding: EdgeInsets.all(5), child: Text("软件部")),
+                      Container(padding: EdgeInsets.all(5), child: Text("硬件部")),
+                      Container(padding: EdgeInsets.all(5), child: Text("运维部")),
+                      Container(padding: EdgeInsets.all(5), child: Text("行政部")),
+                      Container(padding: EdgeInsets.all(5), child: Text("测试部")),
+                    ],
+                  ),
+                  SizedBox(width: 50),
+                  Container(width: 1, color: Colors.grey),
+                  Expanded(child: Container(color: Colors.white)),
+                  Column(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      IconButton(
+                        onPressed: () {
+                          Navigator.pop(context);
+                        },
+                        icon: Icon(Icons.close),
+                      ),
+                      ElevatedButton(
+                        onPressed: () {
+                          Navigator.pop(context);
+                          _showMessage(context, "好友添加成功");
+                        },
+                        child: Text("添加"),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+          ),
+    );
+  }
+
   void _showMessage(BuildContext context, String message) {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(content: Text(message), duration: Duration(seconds: 2)),
+    );
+  }
+
+  void _showContextMenu(BuildContext context, Offset position) async {
+    final String? selected = await showMenu<String>(
+      context: context,
+      position: RelativeRect.fromLTRB(
+        position.dx,
+        position.dy,
+        position.dx,
+        position.dy,
+      ),
+      items: [
+        // PopupMenuItem<String>(value: 'copy', child: Text('复制')),
+        PopupMenuItem<String>(value: 'largeView', child: Text('查看大图')),
+      ],
+    );
+
+    if (selected != null) {
+      _handleMenuSelection(selected);
+    }
+  }
+
+  void _handleMenuSelection(String value) async {
+    switch (value) {
+      case 'copy':
+        print('复制操作');
+        // await Clipboard.setData(ClipboardData(text: s));
+        break;
+      case 'largeView':
+        showDialog(
+          context: context,
+          barrierDismissible: false,
+          builder:
+              (context) => Dialog(
+                backgroundColor: Colors.white,
+                child: Container(
+                  width: 800,
+                  height: 500,
+                  padding: EdgeInsets.all(30),
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Expanded(child: Image.asset("assets/images/head.png")),
+                      Column(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          IconButton(
+                            onPressed: () {
+                              Navigator.pop(context);
+                            },
+                            icon: Icon(Icons.close),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+        );
+        break;
+      case 'delete':
+        print('删除操作');
+        break;
+    }
+  }
+
+  Widget buildDraggableImage(File imageFile) {
+    return Draggable<Uint8List>(
+      data: imageFile.readAsBytesSync(),
+      feedback: Container(
+        width: 100,
+        height: 100,
+        child: Image.file(imageFile),
+      ),
+      childWhenDragging: Container(width: 100, height: 100, color: Colors.grey),
+      child: Container(width: 100, height: 100, child: Image.file(imageFile)),
+    );
+  }
+
+  Widget buildTargetArea() {
+    return // 拖拽支持
+    DragTarget<Uint8List>(
+      onAcceptWithDetails: (data) {
+        print('拖拽数据: $data');
+        setState(() {
+          isDragged = true;
+        });
+      },
+      builder: (context, candidateData, rejectedData) {
+        return isDragged &&
+                imageFileSelected != null &&
+                (imageFileSelected!.path.endsWith(".png") ||
+                    imageFileSelected!.path.endsWith(".jpg"))
+            ? Image.file(imageFileSelected!)
+            : Container(
+              width: 150,
+              height: 40,
+              padding: EdgeInsets.all(20),
+              color:
+                  candidateData.isNotEmpty
+                      ? Colors.blue[100]
+                      : Colors.grey[200],
+              child: Text('图片拖拽到这里', style: TextStyle(color: Colors.green)),
+            );
+      },
     );
   }
 
@@ -472,16 +634,24 @@ class _MyMacosPageState extends State<MyMacosPage> {
                             isInHead = false;
                           });
                         },
-                        child: Container(
-                          decoration: BoxDecoration(
-                            borderRadius: BorderRadius.circular(10),
-                          ),
-                          width: isInHead ? 80 : 50,
-                          height: isInHead ? 80 : 50,
-                          child: Image.asset(
-                            "assets/images/head.png",
-                            width: 50,
-                            height: 50,
+                        child: GestureDetector(
+                          onSecondaryTapDown: (details) {
+                            _showContextMenu(context, details.globalPosition);
+                          },
+                          onSecondaryTap: () {
+                            // 右键点击事件
+                          },
+                          child: Container(
+                            decoration: BoxDecoration(
+                              borderRadius: BorderRadius.circular(10),
+                            ),
+                            width: isInHead ? 80 : 50,
+                            height: isInHead ? 80 : 50,
+                            child: Image.asset(
+                              "assets/images/head.png",
+                              width: 50,
+                              height: 50,
+                            ),
                           ),
                         ),
                       ),
@@ -636,7 +806,7 @@ class _MyMacosPageState extends State<MyMacosPage> {
                   : Platform.isMacOS
                   ? Colors.tealAccent
                   : Colors.blue,
-          onPressed: _incrementCounter,
+          onPressed: _addFriend,
           tooltip: 'Add Friend',
           child: const Icon(Icons.add),
         ), // This trailing comma makes auto-formatting nicer for build methods.
@@ -696,6 +866,16 @@ class _MyMacosPageState extends State<MyMacosPage> {
                             child: Row(
                               children: [
                                 SizedBox(width: 10),
+
+                                // CustomHoverTooltip(
+                                //   tooltipText: '这是自定义的悬停提示',
+                                //   child: Container(
+                                //     width: 150,
+                                //     height: 60,
+                                //     color: Colors.orange,
+                                //     child: Center(child: Text('悬停查看自定义提示')),
+                                //   ),
+                                // ),
                                 Expanded(
                                   child: Container(
                                     decoration: BoxDecoration(
@@ -710,15 +890,25 @@ class _MyMacosPageState extends State<MyMacosPage> {
                                   ),
                                 ),
                                 SizedBox(width: 20),
-                                Container(
-                                  // color: Colors.purple,
-                                  width: 30,
-                                  height: 30,
-                                  child: const Icon(
-                                    Icons.search,
-                                    color: Colors.grey,
+                                Tooltip(
+                                  message: '搜索你想要的内容',
+                                  child: IconButton(
+                                    icon: const Icon(
+                                      Icons.search,
+                                      color: Colors.grey,
+                                    ),
+                                    onPressed: () {},
                                   ),
                                 ),
+                                // Container(
+                                //   // color: Colors.purple,
+                                //   width: 30,
+                                //   height: 30,
+                                //   child: const Icon(
+                                //     Icons.search,
+                                //     color: Colors.grey,
+                                //   ),
+                                // ),
                                 SizedBox(width: 10),
                               ],
                             ),
@@ -732,12 +922,56 @@ class _MyMacosPageState extends State<MyMacosPage> {
                                 chatSelected = chat;
                               });
                             },
-                            child: Container(
-                              alignment: Alignment.centerLeft,
-                              padding: EdgeInsets.only(left: 20),
-                              height: 40,
-                              color: Colors.white,
-                              child: Text(name),
+                            child: RichTooltip(
+                              tooltipContent: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Row(
+                                    children: [
+                                      const Icon(
+                                        Icons.person,
+                                        color: Colors.grey,
+                                      ),
+                                      SizedBox(width: 10),
+                                      Text(
+                                        name,
+                                        style: TextStyle(
+                                          fontWeight: FontWeight.bold,
+                                          fontSize: 14,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                  SizedBox(height: 8),
+                                  Text(
+                                    '这是一个包含多行内容的 Tooltip，可以显示更详细的信息说明。',
+                                    style: TextStyle(fontSize: 12),
+                                  ),
+                                  SizedBox(height: 8),
+                                  Row(
+                                    children: [
+                                      Icon(
+                                        Icons.email,
+                                        size: 12,
+                                        color: Colors.blue,
+                                      ),
+                                      SizedBox(width: 4),
+                                      Text(
+                                        '发邮件',
+                                        style: TextStyle(fontSize: 10),
+                                      ),
+                                    ],
+                                  ),
+                                ],
+                              ),
+                              child: Container(
+                                alignment: Alignment.centerLeft,
+                                padding: EdgeInsets.only(left: 20),
+                                height: 40,
+                                color: Colors.white,
+                                child: Text(name),
+                              ),
                             ),
                           );
                         }
@@ -853,14 +1087,69 @@ class _MyMacosPageState extends State<MyMacosPage> {
                             //     );
                             //   },
                             // ),
+                            if (imageFileSelected != null &&
+                                (imageFileSelected!.path.endsWith(".png") ||
+                                    imageFileSelected!.path.endsWith(".jpg")))
+                              buildDraggableImage(imageFileSelected!),
                             ElevatedButton(
                               onPressed: () async {
+                                setState(() {
+                                  imageFileSelected = null;
+                                  isDragged = false;
+                                });
                                 FilePickerResult? result =
                                     await FilePicker.platform.pickFiles();
                                 if (result != null) {
                                   File file = File(result.files.single.path!);
                                   print(file.uri);
+                                  setState(() {
+                                    imageFileSelected = file;
+                                  });
                                   // 处理文件
+                                  showDialog(
+                                    context: context,
+                                    barrierDismissible: false,
+                                    builder:
+                                        (context) => Dialog(
+                                          backgroundColor: Colors.white,
+                                          child: Container(
+                                            width: 800,
+                                            height: 500,
+                                            padding: EdgeInsets.all(30),
+                                            child: Row(
+                                              crossAxisAlignment:
+                                                  CrossAxisAlignment.start,
+                                              children: [
+                                                Expanded(
+                                                  child:
+                                                      file.path.endsWith(
+                                                                ".png",
+                                                              ) ||
+                                                              file.path
+                                                                  .endsWith(
+                                                                    ".jpg",
+                                                                  )
+                                                          ? Image.file(file)
+                                                          : Text("该文件暂不支持预览"),
+                                                ),
+                                                Column(
+                                                  mainAxisAlignment:
+                                                      MainAxisAlignment
+                                                          .spaceBetween,
+                                                  children: [
+                                                    IconButton(
+                                                      onPressed: () {
+                                                        Navigator.pop(context);
+                                                      },
+                                                      icon: Icon(Icons.close),
+                                                    ),
+                                                  ],
+                                                ),
+                                              ],
+                                            ),
+                                          ),
+                                        ),
+                                  );
                                 }
                               },
                               child: Text('选择文件'),
@@ -909,7 +1198,12 @@ class _MyMacosPageState extends State<MyMacosPage> {
                                     height: 40,
                                     child: Row(
                                       children: [
+                                        buildTargetArea(),
                                         Expanded(child: SizedBox()),
+                                        // DragDropReceiver(
+                                        //   onFilesDropped: _handleFilesDropped,
+                                        //   child: _buildContent(),
+                                        // ),
                                         GestureDetector(
                                           onTap: () {
                                             _sendMessage(
@@ -1044,8 +1338,402 @@ class _MyMacosPageState extends State<MyMacosPage> {
         return Container(color: Colors.yellow);
     }
   }
+
+  void _handleFilesDropped(List<File> files) {
+    setState(() {
+      _droppedFiles.addAll(files);
+    });
+
+    // 显示成功消息
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text('成功添加 ${files.length} 个文件'),
+        backgroundColor: Colors.green,
+      ),
+    );
+  }
+
+  Widget _buildContent() {
+    return Column(
+      children: [
+        // 拖拽提示区域
+        Expanded(
+          flex: 1,
+          child: Container(
+            margin: EdgeInsets.all(20),
+            decoration: BoxDecoration(
+              border: Border.all(
+                color: Colors.grey,
+                width: 2,
+                style: BorderStyle.none,
+              ),
+              borderRadius: BorderRadius.circular(10),
+            ),
+            child: Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(Icons.cloud_upload, size: 64, color: Colors.grey),
+                  SizedBox(height: 16),
+                  Text(
+                    '拖拽图片或视频文件到这里',
+                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                  ),
+                  SizedBox(height: 8),
+                  Text(
+                    '支持格式: ${_supportedTypes.join(', ')}',
+                    style: TextStyle(fontSize: 14, color: Colors.grey),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+        // 文件列表
+        Expanded(flex: 2, child: _buildFileList()),
+      ],
+    );
+  }
+
+  Widget _buildFileList() {
+    if (_droppedFiles.isEmpty) {
+      return Center(
+        child: Text('暂无文件', style: TextStyle(fontSize: 16, color: Colors.grey)),
+      );
+    }
+
+    return ListView.builder(
+      padding: EdgeInsets.all(16),
+      itemCount: _droppedFiles.length,
+      itemBuilder: (context, index) {
+        final file = _droppedFiles[index];
+        return _buildFileItem(file, index);
+      },
+    );
+  }
+
+  Widget _buildFileItem(File file, int index) {
+    final isImage = _isImageFile(file);
+    final fileName = file.path.split('/').last;
+    final fileSize = _getFileSize(file);
+
+    return Card(
+      margin: EdgeInsets.only(bottom: 8),
+      child: ListTile(
+        leading:
+            isImage
+                ? Image.file(
+                  file,
+                  width: 50,
+                  height: 50,
+                  fit: BoxFit.cover,
+                  errorBuilder: (context, error, stackTrace) {
+                    return Icon(Icons.broken_image, size: 40);
+                  },
+                )
+                : Icon(Icons.videocam, size: 40, color: Colors.red),
+        title: Text(fileName, overflow: TextOverflow.ellipsis),
+        subtitle: Text(fileSize),
+        trailing: IconButton(
+          icon: Icon(Icons.delete, color: Colors.red),
+          onPressed: () => _removeFile(index),
+        ),
+        onTap: () => _previewFile(file),
+      ),
+    );
+  }
+
+  void _removeFile(int index) {
+    setState(() {
+      _droppedFiles.removeAt(index);
+    });
+  }
+
+  void _previewFile(File file) {
+    // 实现文件预览功能
+    if (_isImageFile(file)) {
+      _previewImage(file);
+    } else {
+      _previewVideo(file);
+    }
+  }
+
+  void _previewImage(File file) {
+    showDialog(
+      context: context,
+      builder:
+          (context) => Dialog(
+            child: Container(
+              padding: EdgeInsets.all(20),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Image.file(file),
+                  SizedBox(height: 16),
+                  TextButton(
+                    onPressed: () => Navigator.of(context).pop(),
+                    child: Text('关闭'),
+                  ),
+                ],
+              ),
+            ),
+          ),
+    );
+  }
+
+  void _previewVideo(File file) {
+    // 这里可以集成视频播放器
+    showDialog(
+      context: context,
+      builder:
+          (context) => AlertDialog(
+            title: Text('视频预览'),
+            content: Text(
+              '视频文件: ${file.path.split('/').last}\n'
+              '需要集成视频播放器来预览视频',
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.of(context).pop(),
+                child: Text('关闭'),
+              ),
+            ],
+          ),
+    );
+  }
 }
+
+bool _isImageFile(File file) {
+  final path = file.path.toLowerCase();
+  return path.endsWith('.jpg') ||
+      path.endsWith('.jpeg') ||
+      path.endsWith('.png') ||
+      path.endsWith('.gif') ||
+      path.endsWith('.bmp') ||
+      path.endsWith('.webp');
+}
+
+String _getFileSize(File file) {
+  final size = file.lengthSync();
+  if (size < 1024) {
+    return '$size B';
+  } else if (size < 1024 * 1024) {
+    return '${(size / 1024).toStringAsFixed(1)} KB';
+  } else {
+    return '${(size / (1024 * 1024)).toStringAsFixed(1)} MB';
+  }
+}
+
+final List<File> _droppedFiles = [];
+
+bool _isDragging = false;
+final Set<String> _supportedExtensions = {
+  '.jpg',
+  '.jpeg',
+  '.png',
+  '.gif',
+  '.bmp',
+  '.webp',
+  '.mp4',
+  '.mov',
+  '.avi',
+  '.mkv',
+  '.webm',
+};
+final List<String> _supportedTypes = [
+  'jpg',
+  'jpeg',
+  'png',
+  'gif',
+  'bmp',
+  'webp',
+  'mp4',
+  'mov',
+  'avi',
+  'mkv',
+  'webm',
+];
 
 class SendIntent extends Intent {
   const SendIntent();
+}
+
+class CustomHoverTooltip extends StatefulWidget {
+  final Widget child;
+  final String tooltipText;
+  final Duration showDelay;
+
+  const CustomHoverTooltip({
+    Key? key,
+    required this.child,
+    required this.tooltipText,
+    this.showDelay = const Duration(milliseconds: 500),
+  }) : super(key: key);
+
+  @override
+  _CustomHoverTooltipState createState() => _CustomHoverTooltipState();
+}
+
+class _CustomHoverTooltipState extends State<CustomHoverTooltip> {
+  OverlayEntry? _overlayEntry;
+  Timer? _timer;
+  bool _isHovering = false;
+
+  void _showTooltip(Offset offset) {
+    _hideTooltip();
+
+    _overlayEntry = OverlayEntry(
+      builder:
+          (context) => Positioned(
+            left: offset.dx + 10,
+            top: offset.dy + 10,
+            child: Material(
+              elevation: 4,
+              borderRadius: BorderRadius.circular(4),
+              child: Container(
+                padding: EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: Colors.black87,
+                  borderRadius: BorderRadius.circular(4),
+                ),
+                child: Text(
+                  widget.tooltipText,
+                  style: TextStyle(color: Colors.white, fontSize: 12),
+                ),
+              ),
+            ),
+          ),
+    );
+
+    Overlay.of(context)?.insert(_overlayEntry!);
+  }
+
+  void _hideTooltip() {
+    _timer?.cancel();
+    _overlayEntry?.remove();
+    _overlayEntry = null;
+  }
+
+  @override
+  void dispose() {
+    _hideTooltip();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return MouseRegion(
+      onHover: (event) {
+        _isHovering = true;
+        _timer?.cancel();
+        _timer = Timer(widget.showDelay, () {
+          if (_isHovering && mounted) {
+            final renderBox = context.findRenderObject() as RenderBox;
+            final offset = renderBox.localToGlobal(Offset.zero);
+            _showTooltip(offset);
+          }
+        });
+      },
+      onExit: (event) {
+        _isHovering = false;
+        _hideTooltip();
+      },
+      child: widget.child,
+    );
+  }
+}
+
+class RichTooltip extends StatefulWidget {
+  final Widget child;
+  final Widget tooltipContent;
+  final Duration showDelay;
+
+  const RichTooltip({
+    Key? key,
+    required this.child,
+    required this.tooltipContent,
+    this.showDelay = const Duration(milliseconds: 300),
+  }) : super(key: key);
+
+  @override
+  _RichTooltipState createState() => _RichTooltipState();
+}
+
+class _RichTooltipState extends State<RichTooltip> {
+  OverlayEntry? _overlayEntry;
+  Timer? _timer;
+  bool _isHovering = false;
+
+  void _showTooltip(Offset offset, Size size) {
+    _hideTooltip();
+
+    _overlayEntry = OverlayEntry(
+      builder:
+          (context) => Positioned(
+            left: offset.dx + size.width / 2,
+            top: offset.dy - 10, // 显示在元素上方
+            child: Material(
+              elevation: 8,
+              borderRadius: BorderRadius.circular(8),
+              child: Container(
+                constraints: BoxConstraints(maxWidth: 200),
+                padding: EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(8),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black26,
+                      blurRadius: 8,
+                      offset: Offset(0, 2),
+                    ),
+                  ],
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [widget.tooltipContent],
+                ),
+              ),
+            ),
+          ),
+    );
+
+    Overlay.of(context).insert(_overlayEntry!);
+  }
+
+  void _hideTooltip() {
+    _timer?.cancel();
+    _overlayEntry?.remove();
+    _overlayEntry = null;
+  }
+
+  @override
+  void dispose() {
+    _hideTooltip();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return MouseRegion(
+      onHover: (event) {
+        _isHovering = true;
+        _timer?.cancel();
+        _timer = Timer(widget.showDelay, () {
+          if (_isHovering && mounted) {
+            final renderBox = context.findRenderObject() as RenderBox;
+            final offset = renderBox.localToGlobal(Offset(-60.0, 0.0));
+            final size = renderBox.size;
+            _showTooltip(offset, size);
+          }
+        });
+      },
+      onExit: (event) {
+        _isHovering = false;
+        _hideTooltip();
+      },
+      child: widget.child,
+    );
+  }
 }
