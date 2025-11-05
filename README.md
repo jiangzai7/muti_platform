@@ -1,0 +1,2 @@
+# muti_platform
+test
