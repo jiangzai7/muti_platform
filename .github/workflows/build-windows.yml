@@ -1,0 +1,80 @@
+name: Flutter Windows Build with EXE Detection
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  build-and-package:
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+
+      - name: Enable Windows desktop
+        run: flutter config --enable-windows-desktop
+
+      - name: Install dependencies
+        run: flutter pub get
+
+      - name: Build Windows app
+        run: flutter build windows --release
+
+      - name: Verify EXE file exists
+        id: verify_exe
+        run: |
+          $exePath = "build\windows\runner\Release\*.exe"
+          $exeFiles = Get-ChildItem -Path $exePath -ErrorAction SilentlyContinue
+          if ($exeFiles) {
+            Write-Host "✅ EXE 文件找到: $($exeFiles.FullName)"
+            Write-Host "文件大小: $([math]::Round($exeFiles.Length/1MB,2)) MB"
+            Write-Host "::set-output name=exe_path::$($exeFiles.FullName)"
+            Write-Host "::set-output name=exe_name::$($exeFiles.Name)"
+          } else {
+            Write-Host "❌ 未找到 EXE 文件"
+            Write-Host "当前目录: $(Get-Location)"
+            Write-Host "构建目录内容:"
+            Get-ChildItem -Path "build" -Recurse | Format-Table FullName
+            exit 1
+          }
+        shell: pwsh
+
+      - name: List all files in release directory
+        run: |
+          Write-Host "=== Release 目录完整文件列表 ==="
+          Get-ChildItem -Path "build/windows/runner/Release" -Recurse | 
+            Format-Table Name, @{Name="Size(KB)";Expression={[math]::Round($_.Length/1KB,2)}}, LastWriteTime
+        shell: pwsh
+
+      - name: Upload executable
+        uses: actions/upload-artifact@v4
+        with:
+          name: MyApp-Windows
+          path: |
+            build/windows/runner/Release/*.exe
+            build/windows/runner/Release/*.dll
+            build/windows/runner/Release/data/
+          retention-days: 30
+
+      - name: Show download instructions
+        run: |
+          Write-Host "🎉 构建成功!"
+          Write-Host ""
+          Write-Host "📥 下载应用程序:"
+          Write-Host "1. 点击上方的 'Summary' 标签"
+          Write-Host "2. 在 Artifacts 部分找到 'MyApp-Windows'"
+          Write-Host "3. 点击下载 ZIP 文件"
+          Write-Host ""
+          Write-Host "📁 解压后您将找到:"
+          Write-Host "   - 主程序 EXE 文件"
+          Write-Host "   - 必要的 DLL 文件"
+          Write-Host "   - 资源文件"
+        shell: pwsh

@@ -1,0 +1,38 @@
+stages:
+  - build
+  - test
+  - deploy
+
+variables:
+  FLUTTER_CHANNEL: "stable"
+
+.build-template: &build-template
+  stage: build
+  before_script:
+    - choco install flutter --version 3.19.5 -y
+    - RefreshEnv.cmd
+    - flutter config --enable-windows-desktop
+    - flutter --version
+  script:
+    - flutter pub get
+    - flutter analyze
+    - flutter test
+    - flutter build windows --release
+  artifacts:
+    paths:
+      - build/windows/runner/Release/
+    expire_in: 1 week
+  tags:
+    - windows
+
+build-windows:
+  <<: *build-template
+  only:
+    - main
+    - develop
+    - tags
+
+build-windows-pull-request:
+  <<: *build-template
+  only:
+    - merge_requests
